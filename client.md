@@ -7,3 +7,25 @@
 Запросы на сервер будет кидать с некоторой частотой, постепенно возрастающей, но резко снижающейся при получении команды в ответе (вдруг надо ещё что-то выполнить)
 
 Есть установление нижнего предела на частоту (условная 1/минута)
+
+Пример работы
+
+```
+...
+client -> server: hello!, i'm $(hostname), uuid= , ts=
+server -> client: ok, 200
+*waits 45s*
+client -> server: hello!, i'm $(hostname), uuid= , ts=
+server -> client: ok, 200
+*waits 46s*
+client -> server: hello!, i'm $(hostname), uuid= , ts=
+server -> client: ok, execute "ip a", 200
+client: *execute*
+client -> server: hello!, i'm $(hostname), uuid= , ts=, stdout= , stderr= , ...
+*waits 23s*
+```
+
+Возможно нужна доп инфа о работе команды (код ошибки как минимум)
+
++ возможно на клиенте стоит ограничить набор допустимых команд
++ стоит явно задуматься о шифровании/идентификации сервера

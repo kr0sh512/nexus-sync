@@ -1,27 +1,21 @@
 # nexus-sync
 
-a utility that allows you to manage access to your computers.
+a utility that allows you to manage your computers.
 
 ## Planned features
 
-- ask for ipv6 of machine
-- enable forward proxy via Server
-- clipboard manage
-- power managment
-- **top**-statistic
-- virt disk mounting (?)
 
 ## Server-side
 
-- works in docker container
-- accept connections on _some_ port
+- (to future) works in docker container
+- accept connections on _some_ port with correct uuid from client
 - works via API requests
 - use _some_ database
 
 ## Client-side
 
 - with _some_ period of time, send info to the server
-- if server need some data
+- if server want client to execute some command
   - decrease fetch time period
-  - send this data
-  - or execute smth
+  - execute command
+  - send result back to the server
