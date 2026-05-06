@@ -2,8 +2,8 @@
 
 a utility that allows you to manage your computers.
 
-## Planned features
-
+*Main Idea*
+server can send to every client "what to do". Centralized control for all clients.
 
 ## Server-side
 
