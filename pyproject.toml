@@ -15,7 +15,8 @@ dependencies = []
 dev = [
     "pytest>=8.0",
     "black>=24.0",
-    "pyinstaller>=6.0"
+    "pyinstaller>=6.0",
+    "mypy>=1.0"
 ]
 
 [tool.setuptools.packages.find]
