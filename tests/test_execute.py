@@ -1,6 +1,6 @@
 import subprocess
 
-from nexus_sync.client.execute import execute_command
+from nexus_sync.client.execute import CommandAccessPolicy, execute_command
 from nexus_sync.common import Command, CommandKind, CommandResultStatus
 
 
@@ -49,6 +49,62 @@ def test_execute_command_rejects_unknown_preset() -> None:
     assert result.status == CommandResultStatus.REJECTED
     assert result.return_code is None
     assert "unknown command preset" in result.stderr
+
+
+def test_execute_command_allows_selected_preset(monkeypatch) -> None:
+    calls = []
+
+    def fake_run(argv, **kwargs):
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, 0, stdout="host\n", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    result = execute_command(
+        _command(),
+        access_policy=CommandAccessPolicy.allow(["hostname"]),
+    )
+
+    assert result.status == CommandResultStatus.SUCCEEDED
+    assert calls == [["hostname"]]
+
+
+def test_execute_command_rejects_disallowed_preset(monkeypatch) -> None:
+    calls = []
+
+    def fake_run(argv, **kwargs):
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, 0, stdout="host\n", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    result = execute_command(
+        _command(name="hostname"),
+        access_policy=CommandAccessPolicy.allow(["network_interfaces"]),
+    )
+
+    assert result.status == CommandResultStatus.REJECTED
+    assert result.return_code is None
+    assert "not allowed" in result.stderr
+    assert calls == []
+
+
+def test_execute_command_full_access_allows_registered_presets(monkeypatch) -> None:
+    calls = []
+
+    def fake_run(argv, **kwargs):
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, 0, stdout="host\n", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    result = execute_command(
+        _command(name="hostname"),
+        access_policy=CommandAccessPolicy.allow_all(),
+    )
+
+    assert result.status == CommandResultStatus.SUCCEEDED
+    assert calls == [["hostname"]]
 
 
 def test_execute_command_maps_non_zero_exit_to_failed(monkeypatch) -> None:

@@ -29,3 +29,18 @@ client -> server: hello!, i'm $(hostname), uuid= , ts=, stdout= , stderr= , ...
 
 + возможно на клиенте стоит ограничить набор допустимых команд
 + стоит явно задуматься о шифровании/идентификации сервера
+
+## Разрешённые команды
+
+Клиент исполняет только локально разрешённые command presets. Базовая
+настройка задаётся переменной окружения `NEXUS_SYNC_ALLOWED_COMMANDS`.
+
+Примеры:
+
+```bash
+NEXUS_SYNC_ALLOWED_COMMANDS=hostname,network_interfaces
+NEXUS_SYNC_ALLOWED_COMMANDS=full_access
+```
+
+`full_access` означает доступ ко всем локально зарегистрированным presets. Это
+не разрешает выполнение произвольных shell-строк от сервера.
