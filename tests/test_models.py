@@ -15,7 +15,7 @@ from nexus_sync.common import (
 )
 
 
-def test_heartbeat_request_accepts_current_mvp_payload() -> None:
+def test_heartbeat_request_accepts_payload() -> None:
     payload = HeartbeatRequest(
         client_id="macbook-pro-01",
         observed_at=datetime(2026, 5, 24, 13, 20, 30, tzinfo=UTC),

@@ -1,5 +1,10 @@
+import uvicorn
+
+from nexus_sync.server.app import app
+
+
 def main() -> None:
-    print("nexus-sync server")
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
 
 if __name__ == "__main__":
