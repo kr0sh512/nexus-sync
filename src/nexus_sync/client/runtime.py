@@ -57,7 +57,11 @@ def load_client_config(env: Mapping[str, str] = os.environ) -> ClientConfig:
     )
 
 
-def build_heartbeat_request(config: ClientConfig) -> HeartbeatRequest:
+def build_heartbeat_request(
+    config: ClientConfig,
+    *,
+    last_command_result: CommandResult | None = None,
+) -> HeartbeatRequest:
     now = datetime.now(UTC)
     return HeartbeatRequest(
         client_id=config.client_id,
@@ -71,7 +75,7 @@ def build_heartbeat_request(config: ClientConfig) -> HeartbeatRequest:
             local_time=datetime.now().astimezone(),
             uptime_seconds=None,
         ),
-        last_command_result=None,
+        last_command_result=last_command_result,
     )
 
 
@@ -112,13 +116,17 @@ def send_heartbeat(
 def run_once(
     config: ClientConfig,
     *,
+    last_command_result: CommandResult | None = None,
     heartbeat_sender: Callable[
         [ClientConfig, HeartbeatRequest],
         HeartbeatResponse,
     ] = send_heartbeat,
     executor: Callable[..., CommandResult] = execute_command,
 ) -> CommandResult | None:
-    response = heartbeat_sender(config, build_heartbeat_request(config))
+    response = heartbeat_sender(
+        config,
+        build_heartbeat_request(config, last_command_result=last_command_result),
+    )
     if response.command is None:
         return None
 

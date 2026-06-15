@@ -84,6 +84,29 @@ def test_build_heartbeat_request_contains_client_state(monkeypatch) -> None:
     assert serialized["state"]["uptime_seconds"] is None
 
 
+def test_build_heartbeat_request_includes_last_command_result(monkeypatch) -> None:
+    monkeypatch.setattr("socket.gethostname", lambda: "macbook-pro.local")
+    monkeypatch.setattr("platform.system", lambda: "Darwin")
+    command_result = CommandResult(
+        command_id="cmd_01JY3H8V8W8P3FXDR3S2BM7M6B",
+        status=CommandResultStatus.SUCCEEDED,
+        started_at=datetime(2026, 5, 24, 13, 20, 31, tzinfo=UTC),
+        finished_at=datetime(2026, 5, 24, 13, 20, 32, tzinfo=UTC),
+        return_code=0,
+        stdout="host\n",
+        stderr="",
+    )
+
+    heartbeat = build_heartbeat_request(_config(), last_command_result=command_result)
+    serialized = heartbeat.model_dump(mode="json")
+
+    assert heartbeat.last_command_result == command_result
+    assert serialized["last_command_result"]["command_id"] == command_result.command_id
+    assert serialized["last_command_result"]["status"] == "succeeded"
+    assert serialized["last_command_result"]["return_code"] == 0
+    assert serialized["last_command_result"]["stdout"] == "host\n"
+
+
 def test_send_heartbeat_posts_json_with_bearer_token() -> None:
     captured = {}
 
@@ -126,6 +149,51 @@ def test_send_heartbeat_posts_json_with_bearer_token() -> None:
     assert captured["authorization"] == "Bearer client-token"
     assert captured["content_type"] == "application/json"
     assert b"macbook-pro-01" in captured["data"]
+
+
+def test_send_heartbeat_serializes_last_command_result() -> None:
+    captured = {}
+
+    def fake_opener(request: urllib.request.Request):
+        captured["data"] = request.data
+        return _Response(
+            HeartbeatResponse(
+                server_time=datetime(2026, 5, 24, 13, 20, 30, tzinfo=UTC),
+                next_poll_after_seconds=60,
+                command=None,
+            )
+            .model_dump_json()
+            .encode()
+        )
+
+    heartbeat = HeartbeatRequest(
+        client_id="macbook-pro-01",
+        observed_at=datetime(2026, 5, 24, 13, 20, 30, tzinfo=UTC),
+        client={
+            "hostname": "macbook-pro.local",
+            "platform": "darwin",
+            "version": "0.1.0",
+        },
+        state={
+            "local_time": datetime(2026, 5, 24, 16, 20, 30, tzinfo=UTC),
+            "uptime_seconds": None,
+        },
+        last_command_result={
+            "command_id": "cmd_01JY3H8V8W8P3FXDR3S2BM7M6B",
+            "status": "succeeded",
+            "started_at": "2026-05-24T13:20:31Z",
+            "finished_at": "2026-05-24T13:20:32Z",
+            "return_code": 0,
+            "stdout": "host\n",
+            "stderr": "",
+        },
+    )
+
+    send_heartbeat(_config(), heartbeat, opener=fake_opener)
+
+    assert b'"last_command_result":' in captured["data"]
+    assert b'"command_id":"cmd_01JY3H8V8W8P3FXDR3S2BM7M6B"' in captured["data"]
+    assert b'"stdout":"host\\n"' in captured["data"]
 
 
 def test_send_heartbeat_maps_http_error_to_runtime_error() -> None:
@@ -196,6 +264,34 @@ def test_run_once_executes_command_with_configured_access_policy() -> None:
     assert result.status == CommandResultStatus.SUCCEEDED
     assert seen["command"].name == "hostname"
     assert seen["access_policy"] == policy
+
+
+def test_run_once_sends_previous_command_result() -> None:
+    previous_result = CommandResult(
+        command_id="cmd_previous",
+        status=CommandResultStatus.FAILED,
+        return_code=1,
+        stdout="",
+        stderr="failed\n",
+    )
+    seen = {}
+
+    def fake_sender(_config: ClientConfig, heartbeat: HeartbeatRequest) -> HeartbeatResponse:
+        seen["last_command_result"] = heartbeat.last_command_result
+        return HeartbeatResponse(
+            server_time=datetime(2026, 5, 24, 13, 20, 30, tzinfo=UTC),
+            next_poll_after_seconds=60,
+            command=None,
+        )
+
+    result = run_once(
+        _config(),
+        last_command_result=previous_result,
+        heartbeat_sender=fake_sender,
+    )
+
+    assert result is None
+    assert seen["last_command_result"] == previous_result
 
 
 def test_main_returns_non_zero_for_missing_config(monkeypatch, capsys) -> None:
