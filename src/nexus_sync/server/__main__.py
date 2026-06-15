@@ -1,9 +1,11 @@
 import uvicorn
 
 from nexus_sync.server.app import app
+from nexus_sync.utils import configure_logging
 
 
 def main() -> None:
+    configure_logging()
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
 

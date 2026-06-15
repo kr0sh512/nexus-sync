@@ -294,19 +294,19 @@ def test_run_once_sends_previous_command_result() -> None:
     assert seen["last_command_result"] == previous_result
 
 
-def test_main_returns_non_zero_for_missing_config(monkeypatch, capsys) -> None:
+def test_main_returns_non_zero_for_missing_config(monkeypatch, caplog) -> None:
     monkeypatch.delenv(SERVER_URL_ENV, raising=False)
     monkeypatch.delenv(CLIENT_ID_ENV, raising=False)
     monkeypatch.delenv(CLIENT_TOKEN_ENV, raising=False)
 
     exit_code = main([])
 
-    captured = capsys.readouterr()
     assert exit_code == 1
-    assert SERVER_URL_ENV in captured.err
+    assert SERVER_URL_ENV in caplog.text
 
 
-def test_main_prints_success_without_command(monkeypatch, capsys) -> None:
+def test_main_logs_success_without_command(monkeypatch, caplog) -> None:
+    caplog.set_level("INFO")
     monkeypatch.setenv(SERVER_URL_ENV, "https://nexus.example.test")
     monkeypatch.setenv(CLIENT_ID_ENV, "macbook-pro-01")
     monkeypatch.setenv(CLIENT_TOKEN_ENV, "client-token")
@@ -314,9 +314,31 @@ def test_main_prints_success_without_command(monkeypatch, capsys) -> None:
 
     exit_code = main([])
 
-    captured = capsys.readouterr()
     assert exit_code == 0
-    assert captured.out == "heartbeat accepted; no command\n"
+    assert "heartbeat accepted; no command" in caplog.text
+
+
+def test_main_logs_command_result(monkeypatch, caplog) -> None:
+    caplog.set_level("INFO")
+    monkeypatch.setenv(SERVER_URL_ENV, "https://nexus.example.test")
+    monkeypatch.setenv(CLIENT_ID_ENV, "macbook-pro-01")
+    monkeypatch.setenv(CLIENT_TOKEN_ENV, "client-token")
+    monkeypatch.setattr(
+        "nexus_sync.client.runtime.run_once",
+        lambda _config: CommandResult(
+            command_id="cmd_01JY3H8V8W8P3FXDR3S2BM7M6B",
+            status=CommandResultStatus.SUCCEEDED,
+            return_code=0,
+            stdout="host\n",
+            stderr="",
+        ),
+    )
+
+    exit_code = main([])
+
+    assert exit_code == 0
+    assert "command result:" in caplog.text
+    assert '"command_id":"cmd_01JY3H8V8W8P3FXDR3S2BM7M6B"' in caplog.text
 
 
 class _Response:

@@ -1,8 +1,8 @@
 import json
+import logging
 import os
 import platform
 import socket
-import sys
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -27,6 +27,7 @@ CLIENT_ID_ENV = "NEXUS_SYNC_CLIENT_ID"
 CLIENT_TOKEN_ENV = "NEXUS_SYNC_CLIENT_TOKEN"
 CLIENT_VERSION = "0.1.0"
 HEARTBEAT_PATH = "/api/v1/client/heartbeat"
+logger = logging.getLogger(__name__)
 
 
 class ClientConfigError(ValueError):
@@ -142,19 +143,20 @@ def main(argv: list[str] | None = None) -> int:
         config = load_client_config()
         result = run_once(config)
     except (ClientConfigError, HeartbeatError, ValueError) as error:
-        print(f"nexus-sync client error: {error}", file=sys.stderr)
+        logger.error("nexus-sync client error: %s", error)
         return 1
 
     if result is None:
-        print("heartbeat accepted; no command")
+        logger.info("heartbeat accepted; no command")
         return 0
 
-    print(
+    logger.info(
+        "command result: %s",
         json.dumps(
             result.model_dump(mode="json"),
             ensure_ascii=False,
             separators=(",", ":"),
-        )
+        ),
     )
     return 0
 
