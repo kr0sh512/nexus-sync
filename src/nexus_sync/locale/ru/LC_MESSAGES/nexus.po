@@ -1,0 +1,192 @@
+# Russian translations for nexus-sync.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the nexus-sync project.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: nexus-sync 0.1.0\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-06-24 22:58+0300\n"
+"PO-Revision-Date: 2026-06-24 23:01+0300\n"
+"Last-Translator: nexus-sync\n"
+"Language: ru\n"
+"Language-Team: ru <LL@li.org>\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: src/nexus_sync/cli/__main__.py:59
+#, python-brace-format
+msgid "HTTP {code}: {detail}"
+msgstr ""
+
+#: src/nexus_sync/cli/__main__.py:61 src/nexus_sync/cli/__main__.py:63
+#, python-brace-format
+msgid "request failed: {error}"
+msgstr "запрос не выполнен: {error}"
+
+#: src/nexus_sync/cli/__main__.py:69
+#, python-brace-format
+msgid "server returned invalid JSON: {error}"
+msgstr "сервер вернул некорректный JSON: {error}"
+
+#: src/nexus_sync/cli/__main__.py:72
+msgid "server returned JSON that is not an object"
+msgstr "сервер вернул JSON, который не является объектом"
+
+#: src/nexus_sync/cli/__main__.py:79 src/nexus_sync/cli/__main__.py:81
+msgid "clients:"
+msgstr "клиенты:"
+
+#: src/nexus_sync/cli/__main__.py:79 src/nexus_sync/cli/__main__.py:111
+msgid "none"
+msgstr "нет"
+
+#: src/nexus_sync/cli/__main__.py:86 src/nexus_sync/cli/__main__.py:101
+#: src/nexus_sync/cli/__main__.py:116
+msgid "<unknown>"
+msgstr "<неизвестно>"
+
+#: src/nexus_sync/cli/__main__.py:87 src/nexus_sync/cli/__main__.py:88
+#: src/nexus_sync/cli/__main__.py:89 src/nexus_sync/cli/__main__.py:90
+#: src/nexus_sync/cli/__main__.py:102 src/nexus_sync/cli/__main__.py:103
+#: src/nexus_sync/cli/__main__.py:104 src/nexus_sync/cli/__main__.py:105
+#: src/nexus_sync/cli/__main__.py:106
+msgid "unknown"
+msgstr "неизвестно"
+
+#: src/nexus_sync/cli/__main__.py:95
+msgid "commands:"
+msgstr "команды:"
+
+#: src/nexus_sync/cli/__main__.py:107
+msgid "available_commands:"
+msgstr "доступные команды:"
+
+#: src/nexus_sync/cli/__main__.py:124
+msgid "queued command:"
+msgstr "команда поставлена в очередь:"
+
+#: src/nexus_sync/cli/__main__.py:124
+msgid "command:"
+msgstr "команда:"
+
+#: src/nexus_sync/cli/__main__.py:141
+msgid "result:"
+msgstr "результат:"
+
+#: src/nexus_sync/cli/__main__.py:146
+msgid "stdout:"
+msgstr ""
+
+#: src/nexus_sync/cli/__main__.py:148
+msgid "stderr:"
+msgstr ""
+
+#: src/nexus_sync/cli/__main__.py:155
+msgid "CLI for nexus-sync server API"
+msgstr "CLI для API сервера nexus-sync"
+
+#: src/nexus_sync/cli/__main__.py:158
+msgid "nexus-sync server URL"
+msgstr "URL сервера nexus-sync"
+
+#: src/nexus_sync/cli/__main__.py:160
+msgid "list clients"
+msgstr "показать список клиентов"
+
+#: src/nexus_sync/cli/__main__.py:161
+msgid "print raw JSON response"
+msgstr "вывести необработанный JSON-ответ"
+
+#: src/nexus_sync/cli/__main__.py:164
+msgid "show client info or queue a command"
+msgstr "показать информацию о клиенте или поставить команду в очередь"
+
+#: src/nexus_sync/cli/__main__.py:165
+msgid "client id"
+msgstr "идентификатор клиента"
+
+#: src/nexus_sync/cli/__main__.py:167
+msgid "queue a command for this client"
+msgstr "поставить команду в очередь для этого клиента"
+
+#: src/nexus_sync/cli/__main__.py:173
+msgid "command timeout in seconds for --run-command"
+msgstr "таймаут команды в секундах для --run-command"
+
+#: src/nexus_sync/cli/__main__.py:176
+msgid "show command execution info"
+msgstr "показать информацию о выполнении команды"
+
+#: src/nexus_sync/cli/__main__.py:177
+msgid "command id"
+msgstr "идентификатор команды"
+
+#: src/nexus_sync/cli/__main__.py:228
+#, python-brace-format
+msgid "nexus-cli error: {error}"
+msgstr "ошибка nexus-cli: {error}"
+
+#: src/nexus_sync/cli/__main__.py:253
+msgid "id"
+msgstr ""
+
+#: src/nexus_sync/cli/__main__.py:254
+msgid "client_id"
+msgstr "id клиента"
+
+#: src/nexus_sync/cli/__main__.py:255
+msgid "hostname"
+msgstr "имя хоста"
+
+#: src/nexus_sync/cli/__main__.py:256
+msgid "platform"
+msgstr "платформа"
+
+#: src/nexus_sync/cli/__main__.py:257
+msgid "version"
+msgstr "версия"
+
+#: src/nexus_sync/cli/__main__.py:258
+msgid "created_at"
+msgstr "создано"
+
+#: src/nexus_sync/cli/__main__.py:259
+msgid "last_seen_at"
+msgstr "последняя активность"
+
+#: src/nexus_sync/cli/__main__.py:260
+msgid "kind"
+msgstr "тип"
+
+#: src/nexus_sync/cli/__main__.py:261
+msgid "name"
+msgstr "имя"
+
+#: src/nexus_sync/cli/__main__.py:262
+msgid "status"
+msgstr "статус"
+
+#: src/nexus_sync/cli/__main__.py:263
+msgid "timeout_seconds"
+msgstr "таймаут (сек)"
+
+#: src/nexus_sync/cli/__main__.py:264
+msgid "delivered_at"
+msgstr "доставлено"
+
+#: src/nexus_sync/cli/__main__.py:265
+msgid "finished_at"
+msgstr "завершено"
+
+#: src/nexus_sync/cli/__main__.py:266
+msgid "return_code"
+msgstr "код возврата"
+
+#: src/nexus_sync/cli/__main__.py:283
+msgid "<empty>"
+msgstr "<пусто>"

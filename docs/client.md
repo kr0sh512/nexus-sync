@@ -1,14 +1,17 @@
 # Client
 
-Основная суть - кидает на известный по ip/домену сервак свой ключ и базовую информацию о себе: hostname, местное время (что-то ещё?)
+The core idea - it sends its key and basic info about itself (hostname, local
+time, anything else?) to a server known by ip/domain.
 
-В ответ может получить как простое "ок", так и команду для выполнения
+In response it can get either a plain "ok" or a command to execute.
 
-Запросы на сервер будет кидать с некоторой частотой, постепенно возрастающей, но резко снижающейся при получении команды в ответе (вдруг надо ещё что-то выполнить)
+It sends requests to the server at a certain frequency, gradually increasing but
+dropping sharply when a command is received in the response (in case something
+else needs to be executed).
 
-Есть установление нижнего предела на частоту (условная 1/минута)
+There is a lower bound on the frequency (roughly 1/minute).
 
-Пример работы
+Example flow
 
 ```
 ...
@@ -25,18 +28,18 @@ client -> server: hello!, i'm $(hostname), uuid= , ts=, stdout= , stderr= , ...
 *waits 23s*
 ```
 
-Возможно нужна доп инфа о работе команды (код ошибки как минимум)
+Additional info about command execution may be needed (at least the error code).
 
-+ возможно на клиенте стоит ограничить набор допустимых команд
-+ стоит явно задуматься о шифровании/идентификации сервера
++ the set of allowed commands should probably be limited on the client
++ encryption / server identification should be considered explicitly
 
-## Разрешённые команды
+## Allowed commands
 
-Клиент исполняет только команды, описанные в локальном YAML config-файле.
-Серверу отправляются только `name` и `description`; поле `cmd` остаётся только
-на клиенте и не управляется сервером.
+The client runs only the commands described in its local YAML config file. Only
+`name` and `description` are sent to the server; the `cmd` field stays on the
+client and is not controlled by the server.
 
-Пример:
+Example:
 
 ```yaml
 server_url: "http://127.0.0.1:5852"
@@ -52,6 +55,6 @@ allowed_commands:
 logging_level: "INFO"
 ```
 
-Файл ищется как `nexus.yml`/`nexus.yaml` в текущей директории, затем в
-`$XDG_CONFIG_HOME`, затем в `~/.config`, затем как
+The file is looked up as `nexus.yml`/`nexus.yaml` in the current directory, then
+in `$XDG_CONFIG_HOME`, then in `~/.config`, then as
 `~/.config/nexus/config.yml`/`.yaml`.

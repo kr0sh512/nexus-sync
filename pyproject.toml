@@ -28,7 +28,13 @@ dev = [
     "doit>=0.36.0",
     "mypy>=1.0",
     "types-PyYAML>=6.0.12",
-    "pre-commit>=4.0"
+    "pre-commit>=4.0",
+    "Babel>=2.14.0"
+]
+docs = [
+    "sphinx>=7.0",
+    "myst-parser>=2.0",
+    "furo>=2024.1.29"
 ]
 
 [project.scripts]
@@ -36,6 +42,9 @@ nexus-cli = "nexus_sync.cli.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+nexus_sync = ["locale/**/*.mo"]
 
 [tool.black]
 line-length = 100
