@@ -61,10 +61,37 @@ nexus-cli --json client linux-client
 nexus-cli --json command cmd_123
 ```
 
+## Localization
+
+CLI output is localized with `gettext` (catalogs managed by Babel). Only
+user-facing CLI strings are translatable; daemon/server log messages are
+deliberately left untranslated.
+
+Select a language with the `NEXUS_SYNC_LANG` env var (falls back to the system
+locale, then to the source English strings):
+
+```bash
+NEXUS_SYNC_LANG=ru nexus-cli command cmd_123
+```
+
+Translation sources live in `src/nexus_sync/locale/<lang>/LC_MESSAGES/nexus.po`.
+Workflow (requires `pip install -e ".[dev]"`):
+
+```bash
+make i18n-extract           # rebuild the .pot template from _()-wrapped strings
+make i18n-update            # merge new/changed strings into existing catalogs
+make i18n-init LANG=de      # start a new language
+# edit the .po file, then:
+make i18n-compile           # build the .mo files shipped with the binary
+```
+
+`make cli` compiles catalogs automatically and bundles them into the binary.
+
 ## Build standalone binary
 
 ```bash
 make cli
 ```
 
-This creates `dist/nexus-cli` through PyInstaller.
+This creates `dist/nexus-cli` through PyInstaller (with localization catalogs
+bundled via `--add-data`).

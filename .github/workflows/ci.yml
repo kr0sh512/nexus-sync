@@ -46,16 +46,21 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            data_sep: ":"
+          - os: windows-latest
+            data_sep: ";"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install -e ".[dev]"
+      - run: pybabel compile -d src/nexus_sync/locale -D nexus
       - run: pyinstaller --onefile src/nexus_sync/client/__main__.py --name nexus-sync-client
       - run: pyinstaller --onefile src/nexus_sync/server/__main__.py --name nexus-sync-server
-      - run: pyinstaller --onefile src/nexus_sync/cli/__main__.py --name nexus-cli
+      - run: pyinstaller --onefile src/nexus_sync/cli/__main__.py --name nexus-cli --add-data "src/nexus_sync/locale${{ matrix.data_sep }}nexus_sync/locale"
       - uses: actions/upload-artifact@v4
         with:
           name: nexus-sync-${{ matrix.os }}

@@ -8,6 +8,9 @@ from collections.abc import Callable
 from types import TracebackType
 from typing import Any, Protocol, Self
 
+from nexus_sync import i18n
+from nexus_sync.i18n import _
+
 DEFAULT_SERVER_URL = "http://127.0.0.1:5852"
 API_PREFIX = "/api/v1"
 JsonObject = dict[str, Any]
@@ -53,62 +56,62 @@ def request_json(
             body = response.read()
     except urllib.error.HTTPError as error:
         detail = error.read().decode(errors="replace")
-        raise CLIError(f"HTTP {error.code}: {detail}") from error
+        raise CLIError(_("HTTP {code}: {detail}").format(code=error.code, detail=detail)) from error
     except urllib.error.URLError as error:
-        raise CLIError(f"request failed: {error.reason}") from error
+        raise CLIError(_("request failed: {error}").format(error=error.reason)) from error
     except OSError as error:
-        raise CLIError(f"request failed: {error}") from error
+        raise CLIError(_("request failed: {error}").format(error=error)) from error
 
     try:
         result = json.loads(body.decode())
     except json.JSONDecodeError as error:
-        raise CLIError(f"server returned invalid JSON: {error}") from error
+        raise CLIError(_("server returned invalid JSON: {error}").format(error=error)) from error
     if not isinstance(result, dict):
-        raise CLIError("server returned JSON that is not an object")
+        raise CLIError(_("server returned JSON that is not an object"))
     return result
 
 
 def format_clients(payload: JsonObject) -> str:
     clients = payload.get("clients", [])
     if not isinstance(clients, list) or not clients:
-        return "clients:\n- none"
+        return _("clients:") + "\n- " + _("none")
 
-    lines = ["clients:"]
+    lines = [_("clients:")]
     for item in clients:
         if not isinstance(item, dict):
             continue
         parts = [
-            str(item.get("id", "<unknown>")),
-            str(item.get("platform", "unknown")),
-            str(item.get("hostname", "unknown")),
-            f"version={item.get('version', 'unknown')}",
-            f"last_seen={item.get('last_seen_at', 'unknown')}",
+            str(item.get("id", _("<unknown>"))),
+            str(item.get("platform", _("unknown"))),
+            str(item.get("hostname", _("unknown"))),
+            f"version={item.get('version', _('unknown'))}",
+            f"last_seen={item.get('last_seen_at', _('unknown'))}",
         ]
         lines.append(f"- {'  '.join(parts)}")
         commands = _command_names(item.get("available_commands", []))
         if commands:
-            lines.append(f"  commands: {', '.join(commands)}")
+            lines.append(f"  {_('commands:')} {', '.join(commands)}")
     return "\n".join(lines)
 
 
 def format_client(payload: JsonObject) -> str:
     lines = [
-        f"id: {payload.get('id', '<unknown>')}",
-        f"hostname: {payload.get('hostname', 'unknown')}",
-        f"platform: {payload.get('platform', 'unknown')}",
-        f"version: {payload.get('version', 'unknown')}",
-        f"created_at: {payload.get('created_at', 'unknown')}",
-        f"last_seen_at: {payload.get('last_seen_at', 'unknown')}",
-        "available_commands:",
+        _field_line("id", payload.get("id", _("<unknown>"))),
+        _field_line("hostname", payload.get("hostname", _("unknown"))),
+        _field_line("platform", payload.get("platform", _("unknown"))),
+        _field_line("version", payload.get("version", _("unknown"))),
+        _field_line("created_at", payload.get("created_at", _("unknown"))),
+        _field_line("last_seen_at", payload.get("last_seen_at", _("unknown"))),
+        _("available_commands:"),
     ]
     commands = payload.get("available_commands", [])
     if not isinstance(commands, list) or not commands:
-        lines.append("- none")
+        lines.append("- " + _("none"))
         return "\n".join(lines)
 
     for command in commands:
         if isinstance(command, dict):
-            name = command.get("name", "<unknown>")
+            name = command.get("name", _("<unknown>"))
             description = command.get("description", "")
             suffix = f" - {description}" if description else ""
             lines.append(f"- {name}{suffix}")
@@ -116,7 +119,7 @@ def format_client(payload: JsonObject) -> str:
 
 
 def format_command(payload: JsonObject, *, queued: bool = False) -> str:
-    lines = ["queued command:" if queued else "command:"]
+    lines = [_("queued command:") if queued else _("command:")]
     for key in (
         "id",
         "client_id",
@@ -129,43 +132,45 @@ def format_command(payload: JsonObject, *, queued: bool = False) -> str:
         "finished_at",
     ):
         if key in payload:
-            lines.append(f"{key}: {payload.get(key)}")
+            lines.append(_field_line(key, payload.get(key)))
 
     result = payload.get("result")
     if isinstance(result, dict):
-        lines.append("result:")
+        lines.append(_("result:"))
         if "status" in result:
-            lines.append(f"  status: {result.get('status')}")
+            lines.append("  " + _field_line("status", result.get("status")))
         if "return_code" in result:
-            lines.append(f"  return_code: {result.get('return_code')}")
-        lines.append("  stdout:")
+            lines.append("  " + _field_line("return_code", result.get("return_code")))
+        lines.append("  " + _("stdout:"))
         lines.extend(_indent_block(str(result.get("stdout", ""))))
-        lines.append("  stderr:")
+        lines.append("  " + _("stderr:"))
         lines.extend(_indent_block(str(result.get("stderr", ""))))
     return "\n".join(lines)
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="nexus-cli", description="CLI for nexus-sync server API")
-    parser.add_argument(
-        "--server-url", "-s", default=DEFAULT_SERVER_URL, help="nexus-sync server URL"
+    parser = argparse.ArgumentParser(
+        prog="nexus-cli", description=_("CLI for nexus-sync server API")
     )
-    parser.add_argument("--list", action="store_true", help="list clients")
-    parser.add_argument("--json", action="store_true", help="print raw JSON response")
+    parser.add_argument(
+        "--server-url", "-s", default=DEFAULT_SERVER_URL, help=_("nexus-sync server URL")
+    )
+    parser.add_argument("--list", action="store_true", help=_("list clients"))
+    parser.add_argument("--json", action="store_true", help=_("print raw JSON response"))
 
     subparsers = parser.add_subparsers(dest="resource")
-    client = subparsers.add_parser("client", help="show client info or queue a command")
-    client.add_argument("id", help="client id")
-    client.add_argument("--run-command", metavar="NAME", help="queue a command for this client")
+    client = subparsers.add_parser("client", help=_("show client info or queue a command"))
+    client.add_argument("id", help=_("client id"))
+    client.add_argument("--run-command", metavar="NAME", help=_("queue a command for this client"))
     client.add_argument(
         "--timeout-seconds",
         type=int,
         default=30,
-        help="command timeout in seconds for --run-command",
+        help=_("command timeout in seconds for --run-command"),
     )
 
-    command = subparsers.add_parser("command", help="show command execution info")
-    command.add_argument("id", help="command id")
+    command = subparsers.add_parser("command", help=_("show command execution info"))
+    command.add_argument("id", help=_("command id"))
     return parser
 
 
@@ -174,6 +179,7 @@ def main(
     *,
     requester: Requester = request_json,
 ) -> int:
+    i18n.setup()
     parser = build_parser()
     args = parser.parse_args(argv)
     server_url = str(args.server_url).rstrip("/")
@@ -215,7 +221,7 @@ def main(
             _print_payload(payload, raw_json=args.json, formatter=format_command)
             return 0
     except CLIError as error:
-        print(f"nexus-cli error: {error}", file=sys.stderr)
+        print(_("nexus-cli error: {error}").format(error=error), file=sys.stderr)
         return 1
 
     parser.print_help()
@@ -234,6 +240,30 @@ def _print_payload(
     print(formatter(payload))
 
 
+def _field_line(key: str, value: object) -> str:
+    return f"{_field_label(key)}: {value}"
+
+
+def _field_label(key: str) -> str:
+    labels = {
+        "id": _("id"),
+        "client_id": _("client_id"),
+        "hostname": _("hostname"),
+        "platform": _("platform"),
+        "version": _("version"),
+        "created_at": _("created_at"),
+        "last_seen_at": _("last_seen_at"),
+        "kind": _("kind"),
+        "name": _("name"),
+        "status": _("status"),
+        "timeout_seconds": _("timeout_seconds"),
+        "delivered_at": _("delivered_at"),
+        "finished_at": _("finished_at"),
+        "return_code": _("return_code"),
+    }
+    return labels.get(key, key)
+
+
 def _command_names(commands: object) -> list[str]:
     if not isinstance(commands, list):
         return []
@@ -246,7 +276,7 @@ def _command_names(commands: object) -> list[str]:
 
 def _indent_block(value: str) -> list[str]:
     if not value:
-        return ["    <empty>"]
+        return ["    " + _("<empty>")]
     return [f"    {line}" if line else "" for line in value.rstrip("\n").splitlines()]
 
 
