@@ -1,4 +1,4 @@
-# nexus-cli
+# CLI
 
 `nexus-cli` is a small non-interactive CLI for the nexus-sync server API.
 

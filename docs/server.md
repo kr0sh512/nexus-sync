@@ -1,50 +1,59 @@
 # Server
 
 TODO:
-- описать формально все API
-- добавить сами команды, возможно сделать их в виде пресетов для платформы
+- formally describe the whole API
+- add the commands themselves, possibly as per-platform presets
 
-## Основная суть
+## Core idea
 
-- API ручки. Доступ чисто по ssl (но это уже зона ответственности nginx)
-- клиенты по своему некоторому ключу будут авторизовываться.
-  - проблема ручной настройки (но она тут будто минимальная, не так плохо)
-- когда клиент что-либо присылает, в ответ ему надо кинуть команды на исполнение, если есть
-- со стороны клиента должен быть настроен trust к серверу
+- API endpoints. Access purely over SSL (but that's already nginx's
+  responsibility).
+- clients authorize with some key of their own.
+  - the manual setup problem (but it seems minimal here, not too bad)
+- when a client sends anything, the response should include commands to execute,
+  if any.
+- the client side must be configured to trust the server.
 
-Для сервера необходимо несколько настроек
+The server needs several settings
 
-- лимит на кол-во запросов (от одного клиента, условно)
-- лимит на хранение инфо (и хранить ли старое? да, логи)
-  - лимит на одного юзера
-  - общий лимит
-- кастомные команды
-- отслеживание получения/выполнение команды сервером, повторные попытки, лимит попыток
+- a request rate limit (per single client, roughly)
+- a limit on stored info (and whether to keep old data? yes, logs)
+  - per-user limit
+  - global limit
+- custom commands
+- tracking command delivery/execution by the server, retries, attempt limit
 
-## Возможности (API ручки)
+## Capabilities (API endpoints)
 
-'Понятия не имею, как описывать эти ручки (точнее, нет желания правильно их описывать)'
+'No idea how to describe these endpoints (or rather, no desire to describe them
+properly)'
 
-### Ручки для админа
+### Admin endpoints
 
-Все пользователи будут считаться админами для удобства. Остальных нет
+All users are treated as admins for convenience. There are no others.
 
-1. получить список всех клиентов
-  - с отдельным параметром "только активированные"
-2. получить данные по клиенту
-  - сюда включается вся инфа о его показателях, когда был в сети + какие команды на него доступны (да, будем их ограничивать, возможно по модели zero-trust)
-3. выполнить какую-то команду
-  - тут вопрос в том, будем ли мы ждать ответа от нашего клиента (вряд ли)
-4. получить токен, авторизация
-5. добавить кастомную команду (для клиента)
-  - проблема в системах, если хочется универсального добавления. Выход - добавлять только для одного клиента (лучше во всём будет)
+1. get the list of all clients
+  - with a separate "only activated" parameter
+2. get data for a client
+  - this includes all info about its metrics, when it was last online, and which
+    commands are available for it (yes, we'll restrict them, possibly via a
+    zero-trust model)
+3. run some command
+  - the question here is whether we'll wait for a response from our client
+    (probably not)
+4. obtain a token, authorization
+5. add a custom command (for a client)
+  - the problem is with systems if you want universal addition. The way out is
+    to add it only for a single client (better all around)
 
-### Ручки для клиентов
+### Client endpoints
 
-Не уверен даже, что больше одной нужно будет
+Not even sure more than one will be needed
 
-1. Прислать информацию
-  - просто стучится со своим uuid и кидает, что знает
-2. Инфо о сервере?
-  - возможно фетчить айпи (чтобы стучаться, если сертификат на месте), другие домены
-  - какие-то особые "правила", если пакет с их установкой потеряется (сам то пакет вряд ли потеряется, мы об этом узнаем сразу)
+1. Send information
+  - just knocks with its uuid and sends what it knows
+2. Info about the server?
+  - possibly fetch the ip (to knock on, if the certificate is in place), other
+    domains
+  - some special "rules" if the package with their installation gets lost (the
+    package itself is unlikely to be lost, we'll know immediately)

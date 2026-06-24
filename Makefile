@@ -1,4 +1,4 @@
-.PHONY: all client server cli test clean i18n-extract i18n-init i18n-update i18n-compile
+.PHONY: all client server cli test clean docs docs-clean i18n-extract i18n-init i18n-update i18n-compile
 
 # CLI localization (nexus-cli strings only; daemon/server logs stay in English).
 LOCALE_DIR := src/nexus_sync/locale
@@ -38,5 +38,12 @@ i18n-compile:
 test:
 	pytest
 
+# Build the Sphinx HTML documentation into docs/_build/html.
+docs:
+	sphinx-build -b html docs docs/_build/html
+
+docs-clean:
+	rm -rf docs/_build
+
 clean:
-	rm -rf build dist *.spec
+	rm -rf build dist *.spec docs/_build
