@@ -1,0 +1,8 @@
+[Unit]
+Description=nexus-sync client heartbeat and command runner
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/absolute/path/to/nexus-sync-client

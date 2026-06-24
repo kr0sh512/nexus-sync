@@ -90,6 +90,72 @@ later heartbeat.
 make [client|server]
 ```
 
+## systemd templates
+
+Template units are available in:
+
+```text
+template/systemd/nexus-sync-server.service
+template/systemd/nexus-sync-client.service
+template/systemd/nexus-sync-client.timer
+```
+
+Replace `ExecStart` with the absolute path to your built binary or script before installing.
+For example:
+
+```ini
+ExecStart=/opt/nexus-sync/nexus-sync-server
+```
+
+The client is a oneshot service triggered by a timer every minute.
+
+### Install server service
+
+```bash
+sudo install -Dm644 template/systemd/nexus-sync-server.service \
+  /etc/systemd/system/nexus-sync-server.service
+sudo editor /etc/systemd/system/nexus-sync-server.service
+sudo mkdir -p /var/lib/nexus-sync
+sudo systemctl daemon-reload
+sudo systemctl enable --now nexus-sync-server.service
+```
+
+Optional server env file used by the template:
+
+```bash
+sudo install -Dm600 .env.example /etc/nexus-sync/server.env
+sudo editor /etc/nexus-sync/server.env
+sudo systemctl restart nexus-sync-server.service
+```
+
+### Install client timer
+
+```bash
+sudo install -Dm644 template/systemd/nexus-sync-client.service \
+  /etc/systemd/system/nexus-sync-client.service
+sudo install -Dm644 template/systemd/nexus-sync-client.timer \
+  /etc/systemd/system/nexus-sync-client.timer
+sudo editor /etc/systemd/system/nexus-sync-client.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now nexus-sync-client.timer
+```
+
+Install the client YAML config separately, for example:
+
+```bash
+sudo install -Dm600 template/linux.yaml /root/.config/nexus/config.yaml
+sudo editor /root/.config/nexus/config.yaml
+```
+
+Check status and logs:
+
+```bash
+systemctl status nexus-sync-server.service
+systemctl list-timers nexus-sync-client.timer
+journalctl -u nexus-sync-server.service -f
+journalctl -u nexus-sync-client.service -f
+```
+
 ### To test
 
 ```

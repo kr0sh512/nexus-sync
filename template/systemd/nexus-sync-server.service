@@ -1,0 +1,15 @@
+[Unit]
+Description=nexus-sync server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/absolute/path/to/nexus-sync-server
+Restart=on-failure
+RestartSec=5s
+EnvironmentFile=-/etc/nexus-sync/server.env
+WorkingDirectory=/var/lib/nexus-sync
+
+[Install]
+WantedBy=multi-user.target

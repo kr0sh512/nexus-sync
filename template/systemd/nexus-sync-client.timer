@@ -1,0 +1,12 @@
+[Unit]
+Description=Run nexus-sync client every minute
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=1min
+AccuracySec=5s
+Persistent=true
+Unit=nexus-sync-client.service
+
+[Install]
+WantedBy=timers.target
