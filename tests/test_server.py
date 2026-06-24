@@ -87,6 +87,28 @@ def test_heartbeat_accepts_state_without_command() -> None:
     assert store.clients["macbook-pro-01"].hostname == "macbook-pro.local"
 
 
+def test_heartbeat_stores_available_commands() -> None:
+    store = InMemoryStore()
+    client = _client(store)
+    payload = _heartbeat_payload()
+    payload["available_commands"] = [
+        {"name": "hostname", "description": "Return system hostname"},
+        {"name": "network_interfaces", "description": "Return network interface information"},
+    ]
+
+    response = client.post(
+        "/api/v1/client/heartbeat",
+        json=payload,
+        headers={"Authorization": "Bearer client-token"},
+    )
+
+    assert response.status_code == 200
+    assert [command.name for command in store.clients["macbook-pro-01"].available_commands] == [
+        "hostname",
+        "network_interfaces",
+    ]
+
+
 def test_heartbeat_delivers_pending_command_and_marks_it_delivered() -> None:
     store = InMemoryStore()
     store.enqueue_command(

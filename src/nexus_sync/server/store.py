@@ -45,6 +45,7 @@ class InMemoryStore:
             last_seen_at=now,
             is_active=True,
             token_hash=token_hash,
+            available_commands=heartbeat.available_commands,
         )
         self.clients[heartbeat.client_id] = record
         return record

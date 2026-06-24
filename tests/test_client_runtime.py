@@ -14,6 +14,7 @@ from nexus_sync.client.runtime import (
     ClientConfigError,
     HeartbeatError,
     build_heartbeat_request,
+    list_available_commands,
     load_client_config,
     main,
     run_once,
@@ -82,6 +83,24 @@ def test_build_heartbeat_request_contains_client_state(monkeypatch) -> None:
     assert heartbeat.last_command_result is None
     assert serialized["client_id"] == "macbook-pro-01"
     assert serialized["state"]["uptime_seconds"] is None
+
+
+def test_list_available_commands_returns_allowed_command_names_and_descriptions() -> None:
+    commands = list_available_commands(CommandAccessPolicy.allow(["hostname"]))
+
+    assert [command.model_dump() for command in commands] == [
+        {"name": "hostname", "description": "Return system hostname"}
+    ]
+
+
+def test_build_heartbeat_request_includes_available_commands(monkeypatch) -> None:
+    monkeypatch.setattr("socket.gethostname", lambda: "macbook-pro.local")
+    monkeypatch.setattr("platform.system", lambda: "Darwin")
+
+    heartbeat = build_heartbeat_request(_config(CommandAccessPolicy.allow(["hostname"])))
+
+    assert [command.name for command in heartbeat.available_commands] == ["hostname"]
+    assert heartbeat.available_commands[0].description == "Return system hostname"
 
 
 def test_build_heartbeat_request_includes_last_command_result(monkeypatch) -> None:

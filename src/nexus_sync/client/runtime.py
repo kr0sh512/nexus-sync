@@ -13,11 +13,17 @@ from typing import Callable, Mapping, Protocol, Self
 from pydantic import ValidationError
 
 from nexus_sync.client.config import load_command_access_policy
-from nexus_sync.client.execute import CommandAccessPolicy, execute_command
+from nexus_sync.client.execute import (
+    DEFAULT_PRESET_DESCRIPTIONS,
+    DEFAULT_PRESETS,
+    CommandAccessPolicy,
+    execute_command,
+)
 from nexus_sync.common import (
     ClientInfo,
     ClientPlatform,
     ClientState,
+    ClientCommandCapability,
     CommandResult,
     HeartbeatRequest,
     HeartbeatResponse,
@@ -93,8 +99,22 @@ def build_heartbeat_request(
             local_time=datetime.now().astimezone(),
             uptime_seconds=None,
         ),
+        available_commands=list_available_commands(config.command_access_policy),
         last_command_result=last_command_result,
     )
+
+
+def list_available_commands(
+    access_policy: CommandAccessPolicy,
+) -> list[ClientCommandCapability]:
+    return [
+        ClientCommandCapability(
+            name=name,
+            description=DEFAULT_PRESET_DESCRIPTIONS.get(name, ""),
+        )
+        for name in sorted(DEFAULT_PRESETS)
+        if access_policy.allows(name)
+    ]
 
 
 def send_heartbeat(

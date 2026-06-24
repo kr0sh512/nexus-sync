@@ -47,6 +47,11 @@ class ClientState(StrictBaseModel):
     uptime_seconds: int | None = Field(default=None, ge=0)
 
 
+class ClientCommandCapability(StrictBaseModel):
+    name: str
+    description: str
+
+
 class CommandResult(StrictBaseModel):
     command_id: str
     status: CommandResultStatus
@@ -62,6 +67,7 @@ class HeartbeatRequest(StrictBaseModel):
     observed_at: datetime
     client: ClientInfo
     state: ClientState
+    available_commands: list[ClientCommandCapability] = Field(default_factory=list)
     last_command_result: CommandResult | None = None
 
 
@@ -89,6 +95,7 @@ class ClientRecord(StrictBaseModel):
     last_seen_at: datetime
     is_active: bool = True
     token_hash: str | None = None
+    available_commands: list[ClientCommandCapability] = Field(default_factory=list)
 
 
 class CommandRecord(StrictBaseModel):

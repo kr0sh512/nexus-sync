@@ -10,6 +10,10 @@ from nexus_sync.common import Command, CommandKind, CommandResult, CommandResult
 PresetBuilder = Callable[[Mapping[str, Any]], Sequence[str]]
 
 DEFAULT_OUTPUT_LIMIT_BYTES = 64 * 1024
+DEFAULT_PRESET_DESCRIPTIONS = {
+    "hostname": "Return system hostname",
+    "network_interfaces": "Return network interface information",
+}
 
 
 @dataclass(frozen=True)

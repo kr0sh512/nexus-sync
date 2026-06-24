@@ -6,6 +6,7 @@ from nexus_sync.common import (
     ClientInfo,
     ClientPlatform,
     ClientState,
+    ClientCommandCapability,
     Command,
     CommandKind,
     CommandResult,
@@ -28,6 +29,12 @@ def test_heartbeat_request_accepts_payload() -> None:
             local_time=datetime(2026, 5, 24, 13, 20, 30, tzinfo=UTC),
             uptime_seconds=1200,
         ),
+        available_commands=[
+            ClientCommandCapability(
+                name="hostname",
+                description="Return system hostname",
+            )
+        ],
         last_command_result=None,
     )
 
@@ -35,6 +42,9 @@ def test_heartbeat_request_accepts_payload() -> None:
 
     assert serialized["client_id"] == "macbook-pro-01"
     assert serialized["client"]["platform"] == "darwin"
+    assert serialized["available_commands"] == [
+        {"name": "hostname", "description": "Return system hostname"}
+    ]
     assert serialized["last_command_result"] is None
 
 
