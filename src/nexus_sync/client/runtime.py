@@ -7,7 +7,8 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Callable, Mapping
+from types import TracebackType
+from typing import Callable, Mapping, Protocol, Self
 
 from pydantic import ValidationError
 
@@ -36,6 +37,22 @@ class ClientConfigError(ValueError):
 
 class HeartbeatError(RuntimeError):
     pass
+
+
+class HeartbeatHTTPResponse(Protocol):
+    def __enter__(self) -> Self: ...
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None: ...
+
+    def read(self) -> bytes: ...
+
+
+HeartbeatOpener = Callable[[urllib.request.Request], HeartbeatHTTPResponse]
 
 
 @dataclass(frozen=True)
@@ -84,7 +101,7 @@ def send_heartbeat(
     config: ClientConfig,
     heartbeat: HeartbeatRequest,
     *,
-    opener: Callable[[urllib.request.Request], object] = urllib.request.urlopen,
+    opener: HeartbeatOpener = urllib.request.urlopen,
 ) -> HeartbeatResponse:
     payload = heartbeat.model_dump_json().encode()
     request = urllib.request.Request(
