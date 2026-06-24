@@ -68,3 +68,15 @@ make cli
 ```
 
 This creates `dist/nexus-cli` through PyInstaller.
+
+## Build wheel package
+
+Use `doit` from the development dependencies:
+
+```bash
+pip install -e .[dev]
+doit wheel
+```
+
+The wheel is written to `dist/nexus_sync-0.1.0-py3-none-any.whl` and installs the
+`nexus-cli` console script.

@@ -15,8 +15,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install black>=24.0
-      - run: black --check src/
+      - run: pip install -e ".[dev]"
+      - run: doit format_check
 
   typecheck:
     name: Type check
@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -e ".[dev]"
-      - run: mypy src/
+      - run: doit typecheck
 
   test:
     name: Tests
@@ -38,7 +38,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -e ".[dev]"
-      - run: pytest
+      - run: doit test
 
   build:
     name: Build (${{ matrix.os }})
@@ -53,9 +53,8 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -e ".[dev]"
-      - run: pyinstaller --onefile src/nexus_sync/client/__main__.py --name nexus-sync-client
-      - run: pyinstaller --onefile src/nexus_sync/server/__main__.py --name nexus-sync-server
-      - run: pyinstaller --onefile src/nexus_sync/cli/__main__.py --name nexus-cli
+      - run: doit package
+      - run: doit pyinstaller
       - uses: actions/upload-artifact@v4
         with:
           name: nexus-sync-${{ matrix.os }}

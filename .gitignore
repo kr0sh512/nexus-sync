@@ -220,3 +220,5 @@ __marimo__/
 .vscode/
 
 *.DS_Store
+.doit.db*
+nexus-sync.db

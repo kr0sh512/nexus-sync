@@ -111,6 +111,18 @@ client on its next heartbeat.
 
 ### To build
 
+Use `doit` for repeatable checks and package builds:
+
+```bash
+pip install -e .[dev]
+doit list
+doit wheel      # build dist/nexus_sync-0.1.0-py3-none-any.whl
+doit package    # build wheel and sdist
+doit            # run tests, typecheck, format check, and wheel build
+```
+
+PyInstaller standalone binaries are still available through Makefile targets:
+
 ```
 make [client|server|cli]
 ```
