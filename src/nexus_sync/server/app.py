@@ -1,16 +1,27 @@
 from datetime import UTC, datetime
+from typing import Any
+from uuid import uuid4
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 
-from nexus_sync.common import HeartbeatRequest, HeartbeatResponse
+from nexus_sync.common import Command, CommandKind, HeartbeatRequest, HeartbeatResponse
 from nexus_sync.server.config import (
     DEFAULT_COMMAND_POLL_SECONDS,
     DEFAULT_IDLE_POLL_SECONDS,
     load_client_tokens,
+    load_database_url,
 )
-from nexus_sync.server.store import InMemoryStore, Store
+from nexus_sync.server.sqlalchemy_store import SQLAlchemyStore
+from nexus_sync.server.store import Store
+
+
+class CommandCreateRequest(BaseModel):
+    name: str
+    args: dict[str, Any] = Field(default_factory=dict)
+    timeout_seconds: int = Field(default=30, gt=0)
 
 
 def create_app(
@@ -19,7 +30,7 @@ def create_app(
     client_tokens: dict[str, str] | None = None,
 ) -> FastAPI:
     app = FastAPI(title="nexus-sync", version="0.1.0")
-    app.state.store = store or InMemoryStore()
+    app.state.store = store or SQLAlchemyStore(load_database_url())
     app.state.client_tokens = client_tokens if client_tokens is not None else load_client_tokens()
 
     @app.exception_handler(RequestValidationError)
@@ -71,6 +82,43 @@ def create_app(
             command=command,
         )
 
+    @app.get("/api/v1/server/clients")
+    def list_clients() -> dict[str, list[dict[str, Any]]]:
+        return {
+            "clients": [client.model_dump(mode="json") for client in app.state.store.list_clients()]
+        }
+
+    @app.get("/api/v1/server/clients/{client_id}")
+    def get_client(client_id: str) -> dict[str, Any]:
+        client = app.state.store.get_client(client_id)
+        if client is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="client not found")
+        return client.model_dump(mode="json")
+
+    @app.post("/api/v1/server/clients/{client_id}/commands", status_code=status.HTTP_201_CREATED)
+    def create_command(client_id: str, payload: CommandCreateRequest) -> dict[str, Any]:
+        if app.state.store.get_client(client_id) is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="client not found")
+
+        return _enqueue_command(
+            store=app.state.store,
+            client_id=client_id,
+            name=payload.name,
+            args=payload.args,
+            timeout_seconds=payload.timeout_seconds,
+        )
+
+    @app.get("/api/v1/server/commands/{command_id}")
+    def get_command(command_id: str) -> dict[str, Any]:
+        command = app.state.store.get_command(command_id)
+        if command is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="command not found")
+
+        body = command.model_dump(mode="json")
+        result = app.state.store.get_command_result(command_id)
+        body["result"] = result.model_dump(mode="json") if result else None
+        return body
+
     return app
 
 
@@ -79,6 +127,26 @@ def _client_id_for_token(client_tokens: dict[str, str], token: str) -> str | Non
         if token == expected_token:
             return client_id
     return None
+
+
+def _enqueue_command(
+    *,
+    store: Store,
+    client_id: str,
+    name: str,
+    args: dict[str, Any],
+    timeout_seconds: int,
+) -> dict[str, Any]:
+    now = datetime.now(UTC)
+    command = Command(
+        id=f"cmd_{uuid4().hex}",
+        kind=CommandKind.EXEC,
+        name=name,
+        args=args,
+        timeout_seconds=timeout_seconds,
+    )
+    record = store.enqueue_command(command, client_id, now)
+    return record.model_dump(mode="json")
 
 
 app = create_app()

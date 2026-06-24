@@ -2,6 +2,11 @@ import os
 
 DEFAULT_IDLE_POLL_SECONDS = 60
 DEFAULT_COMMAND_POLL_SECONDS = 10
+DEFAULT_DATABASE_URL = "sqlite:///nexus-sync.db"
+
+
+def load_database_url() -> str:
+    return os.environ.get("NEXUS_SYNC_DATABASE_URL", DEFAULT_DATABASE_URL)
 
 
 def load_client_tokens() -> dict[str, str]:

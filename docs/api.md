@@ -138,6 +138,58 @@ Authorization: Bearer <client-token>
 Клиент обязан выполнять только те команды, которые он знает и локально
 разрешает. Неизвестные или запрещённые команды нужно возвращать как `rejected`.
 
+## Server-side API
+
+Эти ручки нужны серверной части/админке, чтобы видеть клиентов и ставить им
+команды в очередь. Клиенты напрямую используют только heartbeat.
+
+### `GET /api/v1/server/clients`
+
+Возвращает список известных клиентов с последними heartbeat-данными и
+`available_commands`.
+
+### `GET /api/v1/server/clients/{client_id}`
+
+Возвращает одного клиента или `404`, если сервер ещё не видел этот `client_id`.
+
+### `POST /api/v1/server/clients/{client_id}/commands`
+
+Создаёт pending-команду для клиента. Клиент получит её на следующем heartbeat.
+Эта ручка принимает имя команды напрямую.
+
+Request:
+
+```json
+{
+  "name": "hostname",
+  "args": {},
+  "timeout_seconds": 30
+}
+```
+
+Response:
+
+```json
+{
+  "id": "cmd_...",
+  "client_id": "macbook-pro-01",
+  "kind": "exec",
+  "name": "hostname",
+  "args": {},
+  "status": "pending",
+  "timeout_seconds": 30,
+  "attempts": 0,
+  "max_attempts": 1,
+  "created_at": "2026-05-24T13:20:30Z",
+  "delivered_at": null,
+  "finished_at": null
+}
+```
+
+### `GET /api/v1/server/commands/{command_id}`
+
+Возвращает команду и, если клиент уже отчитался, поле `result`.
+
 ## Command lifecycle
 
 Жизненный цикл команды:

@@ -246,22 +246,25 @@ def main(argv: list[str] | None = None) -> int:
     try:
         config = load_client_config()
         result = run_once(config)
+        if result is None:
+            logger.info("heartbeat accepted; no command")
+            return 0
+
+        while result is not None:
+            logger.info(
+                "command result: %s",
+                json.dumps(
+                    result.model_dump(mode="json"),
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                ),
+            )
+            result = run_once(config, last_command_result=result)
+            logger.info("command result reported to server")
     except (ClientConfigError, HeartbeatError, ValueError) as error:
         logger.error("nexus-sync client error: %s", error)
         return 1
 
-    if result is None:
-        logger.info("heartbeat accepted; no command")
-        return 0
-
-    logger.info(
-        "command result: %s",
-        json.dumps(
-            result.model_dump(mode="json"),
-            ensure_ascii=False,
-            separators=(",", ":"),
-        ),
-    )
     return 0
 
 

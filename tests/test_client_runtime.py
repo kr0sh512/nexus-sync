@@ -387,7 +387,7 @@ def test_main_logs_success_without_command(monkeypatch, caplog, tmp_path) -> Non
     assert "heartbeat accepted; no command" in caplog.text
 
 
-def test_main_logs_command_result(monkeypatch, caplog, tmp_path) -> None:
+def test_main_logs_and_reports_command_result(monkeypatch, caplog, tmp_path) -> None:
     caplog.set_level("INFO")
     monkeypatch.chdir(tmp_path)
     (tmp_path / "nexus.yml").write_text(
@@ -400,21 +400,27 @@ def test_main_logs_command_result(monkeypatch, caplog, tmp_path) -> None:
             ]
         )
     )
-    monkeypatch.setattr(
-        "nexus_sync.client.runtime.run_once",
-        lambda _config: CommandResult(
-            command_id="cmd_01JY3H8V8W8P3FXDR3S2BM7M6B",
-            status=CommandResultStatus.SUCCEEDED,
-            return_code=0,
-            stdout="host\n",
-            stderr="",
-        ),
+    command_result = CommandResult(
+        command_id="cmd_01JY3H8V8W8P3FXDR3S2BM7M6B",
+        status=CommandResultStatus.SUCCEEDED,
+        return_code=0,
+        stdout="host\n",
+        stderr="",
     )
+    reported_results = []
+
+    def fake_run_once(_config: ClientConfig, *, last_command_result=None):
+        reported_results.append(last_command_result)
+        return command_result if last_command_result is None else None
+
+    monkeypatch.setattr("nexus_sync.client.runtime.run_once", fake_run_once)
 
     exit_code = main([])
 
     assert exit_code == 0
+    assert reported_results == [None, command_result]
     assert "command result:" in caplog.text
+    assert "command result reported to server" in caplog.text
     assert '"command_id":"cmd_01JY3H8V8W8P3FXDR3S2BM7M6B"' in caplog.text
 
 

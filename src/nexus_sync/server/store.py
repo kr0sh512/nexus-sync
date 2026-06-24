@@ -15,7 +15,16 @@ from nexus_sync.common import (
 
 
 class Store(Protocol):
+    def list_clients(self) -> list[ClientRecord]:
+        pass
+
+    def get_client(self, client_id: str) -> ClientRecord | None:
+        pass
+
     def upsert_client(self, heartbeat: HeartbeatRequest, now: datetime) -> ClientRecord:
+        pass
+
+    def enqueue_command(self, command: Command, client_id: str, now: datetime) -> CommandRecord:
         pass
 
     def record_command_result(self, heartbeat: HeartbeatRequest, now: datetime) -> None:
@@ -24,12 +33,24 @@ class Store(Protocol):
     def take_next_command(self, client_id: str, now: datetime) -> Command | None:
         pass
 
+    def get_command(self, command_id: str) -> CommandRecord | None:
+        pass
+
+    def get_command_result(self, command_id: str) -> CommandResultRecord | None:
+        pass
+
 
 @dataclass
 class InMemoryStore:
     clients: dict[str, ClientRecord] = field(default_factory=dict)
     commands: dict[str, CommandRecord] = field(default_factory=dict)
     results: list[CommandResultRecord] = field(default_factory=list)
+
+    def list_clients(self) -> list[ClientRecord]:
+        return sorted(self.clients.values(), key=lambda client: client.id)
+
+    def get_client(self, client_id: str) -> ClientRecord | None:
+        return self.clients.get(client_id)
 
     def upsert_client(self, heartbeat: HeartbeatRequest, now: datetime) -> ClientRecord:
         existing = self.clients.get(heartbeat.client_id)
@@ -134,6 +155,15 @@ class InMemoryStore:
             args=record.args,
             timeout_seconds=record.timeout_seconds,
         )
+
+    def get_command(self, command_id: str) -> CommandRecord | None:
+        return self.commands.get(command_id)
+
+    def get_command_result(self, command_id: str) -> CommandResultRecord | None:
+        for result in reversed(self.results):
+            if result.command_id == command_id:
+                return result
+        return None
 
 
 TERMINAL_COMMAND_STATUSES = {
