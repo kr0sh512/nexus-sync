@@ -28,6 +28,9 @@ dev = [
     "pre-commit>=4.0"
 ]
 
+[project.scripts]
+nexus-cli = "nexus_sync.cli.__main__:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

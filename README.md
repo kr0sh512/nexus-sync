@@ -52,6 +52,7 @@ stays local to the client config.
 - API contract: [docs/api.md](docs/api.md)
 - Client behavior notes: [docs/client.md](docs/client.md)
 - Server behavior notes: [docs/server.md](docs/server.md)
+- CLI usage: [docs/cli.md](docs/cli.md)
 
 ## Server API
 
@@ -84,10 +85,34 @@ Queue command example:
 Clients receive queued commands on their next heartbeat and report results in a
 later heartbeat.
 
+## CLI
+
+Install the package in editable mode to use the server API CLI:
+
+```bash
+pip install -e .
+nexus-cli --help
+```
+
+Common commands:
+
+```bash
+nexus-cli --list
+nexus-cli --server-url http://127.0.0.1:5852 --list
+nexus-cli client linux-client
+nexus-cli client linux-client --run-command hostname
+nexus-cli client linux-client --run-command hostname --timeout-seconds 30
+nexus-cli command cmd_123
+nexus-cli --json command cmd_123
+```
+
+The CLI uses only server-side API handlers. Queued commands are delivered to the
+client on its next heartbeat.
+
 ### To build
 
 ```
-make [client|server]
+make [client|server|cli]
 ```
 
 ## systemd templates
@@ -143,7 +168,7 @@ sudo systemctl enable --now nexus-sync-client.timer
 Install the client YAML config separately, for example:
 
 ```bash
-sudo install -Dm600 template/linux.yaml /root/.config/nexus/config.yaml
+sudo install -Dm600 template/linux-config.yaml /root/.config/nexus/config.yaml
 sudo editor /root/.config/nexus/config.yaml
 ```
 
