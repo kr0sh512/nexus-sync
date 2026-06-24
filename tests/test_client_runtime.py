@@ -7,13 +7,11 @@ import pytest
 
 from nexus_sync.client.execute import CommandAccessPolicy
 from nexus_sync.client.runtime import (
-    CLIENT_ID_ENV,
-    CLIENT_TOKEN_ENV,
-    SERVER_URL_ENV,
     ClientConfig,
     ClientConfigError,
     HeartbeatError,
     build_heartbeat_request,
+    find_client_config_path,
     list_available_commands,
     load_client_config,
     main,
@@ -39,34 +37,77 @@ def _config(policy: CommandAccessPolicy | None = None) -> ClientConfig:
     )
 
 
-def test_load_client_config_reads_required_env_and_normalizes_server_url() -> None:
-    config = load_client_config(
-        {
-            SERVER_URL_ENV: "https://nexus.example.test/",
-            CLIENT_ID_ENV: "macbook-pro-01",
-            CLIENT_TOKEN_ENV: "client-token",
-            "NEXUS_SYNC_ALLOWED_COMMANDS": "hostname",
-        }
+def test_find_client_config_path_prefers_current_directory(tmp_path) -> None:
+    cwd_config = tmp_path / "nexus.yaml"
+    cwd_config.write_text("client_id: current\n")
+    xdg_config = tmp_path / "xdg" / "nexus.yml"
+    xdg_config.parent.mkdir()
+    xdg_config.write_text("client_id: xdg\n")
+
+    path = find_client_config_path(
+        env={"XDG_CONFIG_HOME": str(xdg_config.parent)},
+        cwd=tmp_path,
+        home=tmp_path / "home",
     )
+
+    assert path == cwd_config
+
+
+def test_find_client_config_path_checks_xdg_and_home_locations(tmp_path) -> None:
+    home = tmp_path / "home"
+    nested_config = home / ".config" / "nexus" / "config.yml"
+    nested_config.parent.mkdir(parents=True)
+    nested_config.write_text("client_id: nested\n")
+
+    path = find_client_config_path(env={}, cwd=tmp_path, home=home)
+
+    assert path == nested_config
+
+
+def test_load_client_config_reads_yaml_file_and_normalizes_server_url(tmp_path) -> None:
+    config_path = tmp_path / "nexus.yml"
+    config_path.write_text(
+        "\n".join(
+            [
+                'server_url: "https://nexus.example.test/"',
+                'client_id: "macbook-pro-01"',
+                'client_token: "client-token"',
+                "allowed_commands:",
+                "  - name: hostname",
+                '    description: "Configured hostname"',
+                '    cmd: "hostname"',
+                "  - name: network_interfaces",
+                '    description: "Configured interfaces"',
+                '    cmd: "ip addr show"',
+                'logging_level: "INFO"',
+            ]
+        )
+    )
+
+    config = load_client_config(config_path=config_path)
 
     assert config.server_url == "https://nexus.example.test"
     assert config.client_id == "macbook-pro-01"
     assert config.token == "client-token"
     assert config.command_access_policy.allows("hostname")
-    assert not config.command_access_policy.allows("network_interfaces")
+    assert config.command_access_policy.allows("network_interfaces")
+    assert config.command_descriptions["hostname"] == "Configured hostname"
+    assert config.command_presets["network_interfaces"]({}) == ["ip", "addr", "show"]
 
 
-@pytest.mark.parametrize("missing_name", [SERVER_URL_ENV, CLIENT_ID_ENV, CLIENT_TOKEN_ENV])
-def test_load_client_config_requires_env_values(missing_name: str) -> None:
-    env = {
-        SERVER_URL_ENV: "https://nexus.example.test",
-        CLIENT_ID_ENV: "macbook-pro-01",
-        CLIENT_TOKEN_ENV: "client-token",
+@pytest.mark.parametrize("missing_name", ["server_url", "client_id", "client_token"])
+def test_load_client_config_requires_yaml_values(tmp_path, missing_name: str) -> None:
+    values = {
+        "server_url": '"https://nexus.example.test"',
+        "client_id": '"macbook-pro-01"',
+        "client_token": '"client-token"',
     }
-    del env[missing_name]
+    del values[missing_name]
+    config_path = tmp_path / "nexus.yml"
+    config_path.write_text("\n".join(f"{key}: {value}" for key, value in values.items()))
 
     with pytest.raises(ClientConfigError, match=missing_name):
-        load_client_config(env)
+        load_client_config(config_path=config_path)
 
 
 def test_build_heartbeat_request_contains_client_state(monkeypatch) -> None:
@@ -270,6 +311,7 @@ def test_run_once_executes_command_with_configured_access_policy() -> None:
     def fake_executor(command: Command, **kwargs) -> CommandResult:
         seen["command"] = command
         seen["access_policy"] = kwargs["access_policy"]
+        seen["presets"] = kwargs["presets"]
         return CommandResult(
             command_id=command.id,
             status=CommandResultStatus.SUCCEEDED,
@@ -283,6 +325,7 @@ def test_run_once_executes_command_with_configured_access_policy() -> None:
     assert result.status == CommandResultStatus.SUCCEEDED
     assert seen["command"].name == "hostname"
     assert seen["access_policy"] == policy
+    assert "hostname" in seen["presets"]
 
 
 def test_run_once_sends_previous_command_result() -> None:
@@ -313,22 +356,29 @@ def test_run_once_sends_previous_command_result() -> None:
     assert seen["last_command_result"] == previous_result
 
 
-def test_main_returns_non_zero_for_missing_config(monkeypatch, caplog) -> None:
-    monkeypatch.delenv(SERVER_URL_ENV, raising=False)
-    monkeypatch.delenv(CLIENT_ID_ENV, raising=False)
-    monkeypatch.delenv(CLIENT_TOKEN_ENV, raising=False)
+def test_main_returns_non_zero_for_missing_config(monkeypatch, caplog, tmp_path) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
 
     exit_code = main([])
 
     assert exit_code == 1
-    assert SERVER_URL_ENV in caplog.text
+    assert "client config file not found" in caplog.text
 
 
-def test_main_logs_success_without_command(monkeypatch, caplog) -> None:
+def test_main_logs_success_without_command(monkeypatch, caplog, tmp_path) -> None:
     caplog.set_level("INFO")
-    monkeypatch.setenv(SERVER_URL_ENV, "https://nexus.example.test")
-    monkeypatch.setenv(CLIENT_ID_ENV, "macbook-pro-01")
-    monkeypatch.setenv(CLIENT_TOKEN_ENV, "client-token")
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "nexus.yml").write_text(
+        "\n".join(
+            [
+                'server_url: "https://nexus.example.test"',
+                'client_id: "macbook-pro-01"',
+                'client_token: "client-token"',
+                "allowed_commands: []",
+            ]
+        )
+    )
     monkeypatch.setattr("nexus_sync.client.runtime.run_once", lambda _config: None)
 
     exit_code = main([])
@@ -337,11 +387,19 @@ def test_main_logs_success_without_command(monkeypatch, caplog) -> None:
     assert "heartbeat accepted; no command" in caplog.text
 
 
-def test_main_logs_command_result(monkeypatch, caplog) -> None:
+def test_main_logs_command_result(monkeypatch, caplog, tmp_path) -> None:
     caplog.set_level("INFO")
-    monkeypatch.setenv(SERVER_URL_ENV, "https://nexus.example.test")
-    monkeypatch.setenv(CLIENT_ID_ENV, "macbook-pro-01")
-    monkeypatch.setenv(CLIENT_TOKEN_ENV, "client-token")
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "nexus.yml").write_text(
+        "\n".join(
+            [
+                'server_url: "https://nexus.example.test"',
+                'client_id: "macbook-pro-01"',
+                'client_token: "client-token"',
+                "allowed_commands: []",
+            ]
+        )
+    )
     monkeypatch.setattr(
         "nexus_sync.client.runtime.run_once",
         lambda _config: CommandResult(

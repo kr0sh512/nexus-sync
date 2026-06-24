@@ -6,7 +6,7 @@ from nexus_sync.utils import configure_logging
 
 def main() -> None:
     configure_logging()
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=5852)
 
 
 if __name__ == "__main__":

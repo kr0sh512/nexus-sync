@@ -1,0 +1,12 @@
+# nexus-sync client config template for Linux
+server_url: "http://127.0.0.1:5852"
+client_id: "linux-client"
+client_token: "change-me-client-token"
+allowed_commands:
+  - name: hostname
+    description: "Get the hostname of the client machine"
+    cmd: "hostname"
+  - name: network_interfaces
+    description: "Get network interface information"
+    cmd: "ip addr show"
+logging_level: "INFO"

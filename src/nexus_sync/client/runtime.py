@@ -2,21 +2,25 @@ import json
 import logging
 import os
 import platform
+import shlex
 import socket
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from collections.abc import Mapping as MappingABC
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 from types import TracebackType
 from typing import Callable, Mapping, Protocol, Self
 
+import yaml  # type: ignore[import-untyped]
 from pydantic import ValidationError
 
-from nexus_sync.client.config import load_command_access_policy
 from nexus_sync.client.execute import (
     DEFAULT_PRESET_DESCRIPTIONS,
     DEFAULT_PRESETS,
     CommandAccessPolicy,
+    PresetBuilder,
     execute_command,
 )
 from nexus_sync.common import (
@@ -29,9 +33,6 @@ from nexus_sync.common import (
     HeartbeatResponse,
 )
 
-SERVER_URL_ENV = "NEXUS_SYNC_SERVER_URL"
-CLIENT_ID_ENV = "NEXUS_SYNC_CLIENT_ID"
-CLIENT_TOKEN_ENV = "NEXUS_SYNC_CLIENT_TOKEN"
 CLIENT_VERSION = "0.1.0"
 HEARTBEAT_PATH = "/api/v1/client/heartbeat"
 logger = logging.getLogger(__name__)
@@ -67,17 +68,75 @@ class ClientConfig:
     client_id: str
     token: str
     command_access_policy: CommandAccessPolicy
+    command_presets: Mapping[str, PresetBuilder] = field(default_factory=lambda: DEFAULT_PRESETS)
+    command_descriptions: Mapping[str, str] = field(
+        default_factory=lambda: DEFAULT_PRESET_DESCRIPTIONS
+    )
+    logging_level: str = "INFO"
 
 
-def load_client_config(env: Mapping[str, str] = os.environ) -> ClientConfig:
-    server_url = _required_env(env, SERVER_URL_ENV).rstrip("/")
-    client_id = _required_env(env, CLIENT_ID_ENV)
-    token = _required_env(env, CLIENT_TOKEN_ENV)
+def find_client_config_path(
+    *,
+    env: Mapping[str, str] = os.environ,
+    cwd: Path | None = None,
+    home: Path | None = None,
+) -> Path | None:
+    cwd = cwd or Path.cwd()
+    home = home or Path.home()
+    candidates = [
+        cwd / "nexus.yml",
+        cwd / "nexus.yaml",
+    ]
+
+    xdg_config_home = env.get("XDG_CONFIG_HOME")
+    if xdg_config_home and xdg_config_home.strip():
+        xdg_dir = Path(xdg_config_home).expanduser()
+        candidates.extend([xdg_dir / "nexus.yml", xdg_dir / "nexus.yaml"])
+
+    candidates.extend(
+        [
+            home / ".config" / "nexus.yml",
+            home / ".config" / "nexus.yaml",
+            home / ".config" / "nexus" / "config.yml",
+            home / ".config" / "nexus" / "config.yaml",
+        ]
+    )
+
+    return next((path for path in candidates if path.is_file()), None)
+
+
+def load_client_config(
+    env: Mapping[str, str] = os.environ,
+    *,
+    config_path: Path | str | None = None,
+) -> ClientConfig:
+    path = Path(config_path) if config_path is not None else find_client_config_path(env=env)
+    if path is None:
+        raise ClientConfigError("client config file not found")
+
+    try:
+        raw_config = yaml.safe_load(path.read_text())
+    except OSError as error:
+        raise ClientConfigError(f"failed to read client config file {path}: {error}") from error
+    except yaml.YAMLError as error:
+        raise ClientConfigError(f"failed to parse client config file {path}: {error}") from error
+
+    if not isinstance(raw_config, MappingABC):
+        raise ClientConfigError("client config file must contain a YAML mapping")
+
+    server_url = _required_config_string(raw_config, "server_url").rstrip("/")
+    client_id = _required_config_string(raw_config, "client_id")
+    token = _required_config_string(raw_config, "client_token")
+    commands = _load_configured_commands(raw_config.get("allowed_commands", []))
+
     return ClientConfig(
         server_url=server_url,
         client_id=client_id,
         token=token,
-        command_access_policy=load_command_access_policy(env),
+        command_access_policy=CommandAccessPolicy.allow(commands.presets),
+        command_presets=commands.presets,
+        command_descriptions=commands.descriptions,
+        logging_level=str(raw_config.get("logging_level", "INFO")).strip() or "INFO",
     )
 
 
@@ -99,20 +158,27 @@ def build_heartbeat_request(
             local_time=datetime.now().astimezone(),
             uptime_seconds=None,
         ),
-        available_commands=list_available_commands(config.command_access_policy),
+        available_commands=list_available_commands(
+            config.command_access_policy,
+            presets=config.command_presets,
+            descriptions=config.command_descriptions,
+        ),
         last_command_result=last_command_result,
     )
 
 
 def list_available_commands(
     access_policy: CommandAccessPolicy,
+    *,
+    presets: Mapping[str, PresetBuilder] = DEFAULT_PRESETS,
+    descriptions: Mapping[str, str] = DEFAULT_PRESET_DESCRIPTIONS,
 ) -> list[ClientCommandCapability]:
     return [
         ClientCommandCapability(
             name=name,
-            description=DEFAULT_PRESET_DESCRIPTIONS.get(name, ""),
+            description=descriptions.get(name, ""),
         )
-        for name in sorted(DEFAULT_PRESETS)
+        for name in sorted(presets)
         if access_policy.allows(name)
     ]
 
@@ -171,6 +237,7 @@ def run_once(
     return executor(
         response.command,
         access_policy=config.command_access_policy,
+        presets=config.command_presets,
     )
 
 
@@ -198,10 +265,62 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _required_env(env: Mapping[str, str], name: str) -> str:
-    value = env.get(name)
-    if value is None or not value.strip():
-        raise ClientConfigError(f"{name} is required")
+@dataclass(frozen=True)
+class _ConfiguredCommands:
+    presets: dict[str, PresetBuilder]
+    descriptions: dict[str, str]
+
+
+def _load_configured_commands(raw_commands: object) -> _ConfiguredCommands:
+    if raw_commands is None:
+        raw_commands = []
+    if not isinstance(raw_commands, list):
+        raise ClientConfigError("allowed_commands must be a list")
+
+    presets: dict[str, PresetBuilder] = {}
+    descriptions: dict[str, str] = {}
+    for index, raw_command in enumerate(raw_commands):
+        if not isinstance(raw_command, MappingABC):
+            raise ClientConfigError(f"allowed_commands[{index}] must be a mapping")
+        name = _required_config_string(raw_command, "name", prefix=f"allowed_commands[{index}]")
+        description = _required_config_string(
+            raw_command,
+            "description",
+            prefix=f"allowed_commands[{index}]",
+        )
+        command_line = _required_config_string(
+            raw_command, "cmd", prefix=f"allowed_commands[{index}]"
+        )
+        argv = shlex.split(command_line, posix=os.name != "nt")
+        if not argv:
+            raise ClientConfigError(f"allowed_commands[{index}].cmd must not be empty")
+        if name in presets:
+            raise ClientConfigError(f"duplicate allowed command name: {name}")
+        presets[name] = _static_preset(argv)
+        descriptions[name] = description
+
+    return _ConfiguredCommands(presets=presets, descriptions=descriptions)
+
+
+def _static_preset(argv: list[str]) -> PresetBuilder:
+    def build(args: Mapping[str, object]) -> list[str]:
+        if args:
+            raise ValueError("configured commands do not accept arguments")
+        return list(argv)
+
+    return build
+
+
+def _required_config_string(
+    config: MappingABC[object, object],
+    name: str,
+    *,
+    prefix: str | None = None,
+) -> str:
+    value = config.get(name)
+    display_name = f"{prefix}.{name}" if prefix else name
+    if not isinstance(value, str) or not value.strip():
+        raise ClientConfigError(f"{display_name} is required")
     return value.strip()
 
 
