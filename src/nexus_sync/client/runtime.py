@@ -81,6 +81,7 @@ def find_client_config_path(
     cwd: Path | None = None,
     home: Path | None = None,
 ) -> Path | None:
+    """Find the client config (nexus.yml/yaml) in cwd, then XDG, then ~/.config."""
     cwd = cwd or Path.cwd()
     home = home or Path.home()
     candidates = [
@@ -110,6 +111,7 @@ def load_client_config(
     *,
     config_path: Path | str | None = None,
 ) -> ClientConfig:
+    """Load and validate the client config, returning a :class:`ClientConfig`."""
     path = Path(config_path) if config_path is not None else find_client_config_path(env=env)
     if path is None:
         raise ClientConfigError("client config file not found")
@@ -145,6 +147,7 @@ def build_heartbeat_request(
     *,
     last_command_result: CommandResult | None = None,
 ) -> HeartbeatRequest:
+    """Build a heartbeat payload from config and an optional last command result."""
     now = datetime.now(UTC)
     return HeartbeatRequest(
         client_id=config.client_id,
@@ -173,6 +176,7 @@ def list_available_commands(
     presets: Mapping[str, PresetBuilder] = DEFAULT_PRESETS,
     descriptions: Mapping[str, str] = DEFAULT_PRESET_DESCRIPTIONS,
 ) -> list[ClientCommandCapability]:
+    """Return the capabilities the access policy allows, as advertised to the server."""
     return [
         ClientCommandCapability(
             name=name,
@@ -189,6 +193,7 @@ def send_heartbeat(
     *,
     opener: HeartbeatOpener = urllib.request.urlopen,
 ) -> HeartbeatResponse:
+    """POST a heartbeat and return the parsed response; raises :class:`HeartbeatError`."""
     payload = heartbeat.model_dump_json().encode()
     request = urllib.request.Request(
         f"{config.server_url}{HEARTBEAT_PATH}",
@@ -227,6 +232,7 @@ def run_once(
     ] = send_heartbeat,
     executor: Callable[..., CommandResult] = execute_command,
 ) -> CommandResult | None:
+    """Send one heartbeat and execute the command the server returns, if any."""
     response = heartbeat_sender(
         config,
         build_heartbeat_request(config, last_command_result=last_command_result),
@@ -242,6 +248,7 @@ def run_once(
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the client once: load config, heartbeat, and drain any queued commands."""
     _ = argv
     try:
         config = load_client_config()

@@ -28,6 +28,9 @@ autodoc_default_options = {
     "show-inheritance": True,
 }
 autodoc_typehints = "description"
+# Render default argument values as written in source (e.g. ``os.environ``)
+# instead of evaluating them, which would dump the live environment into a signature.
+autodoc_preserve_defaults = True
 
 # MyST so the existing Markdown guides render as-is.
 myst_enable_extensions = ["colon_fence", "deflist"]
