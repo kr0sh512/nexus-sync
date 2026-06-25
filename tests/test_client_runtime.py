@@ -359,6 +359,7 @@ def test_run_once_sends_previous_command_result() -> None:
 def test_main_returns_non_zero_for_missing_config(monkeypatch, caplog, tmp_path) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
 
     exit_code = main([])
 
