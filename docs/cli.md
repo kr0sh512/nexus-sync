@@ -78,19 +78,20 @@ Translation sources live in `src/nexus_sync/locale/<lang>/LC_MESSAGES/nexus.po`.
 Workflow (requires `pip install -e ".[dev]"`):
 
 ```bash
-make i18n-extract           # rebuild the .pot template from _()-wrapped strings
-make i18n-update            # merge new/changed strings into existing catalogs
-make i18n-init LANG=de      # start a new language
+doit i18n_extract           # rebuild the .pot template from _()-wrapped strings
+doit i18n_update            # merge new/changed strings into existing catalogs
+doit i18n_init --lang de    # start a new language
 # edit the .po file, then:
-make i18n-compile           # build the .mo files shipped with the binary
+doit i18n_compile           # build the .mo files shipped with the binary
 ```
 
-`make cli` compiles catalogs automatically and bundles them into the binary.
+`doit pyinstaller_cli` compiles catalogs automatically and bundles them into the
+binary.
 
 ## Build standalone binary
 
 ```bash
-make cli
+doit pyinstaller_cli
 ```
 
 This creates `dist/nexus-cli` through PyInstaller (with localization catalogs

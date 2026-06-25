@@ -130,11 +130,8 @@ pip install -e .[docs]
 doit docs           # output in docs/_build/html
 ```
 
-PyInstaller standalone binaries are also available through Makefile targets:
-
-```
-make [client|server|cli]
-```
+Individual standalone binaries: `doit pyinstaller_client`,
+`doit pyinstaller_server`, `doit pyinstaller_cli`.
 
 ## systemd templates
 

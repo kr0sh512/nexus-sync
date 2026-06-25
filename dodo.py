@@ -63,6 +63,16 @@ def task_i18n_extract():
     }
 
 
+def task_i18n_init():
+    """Create a catalog for a new language, e.g. `doit i18n_init --lang de`."""
+    return {
+        "actions": [f"{PYBABEL} init -i {POT_FILE} -d {LOCALE_DIR} -D nexus -l %(lang)s"],
+        "params": [{"name": "lang", "short": "l", "long": "lang", "default": "ru"}],
+        "file_dep": [str(POT_FILE)],
+        "verbosity": 2,
+    }
+
+
 def task_i18n_update():
     """Merge new/changed strings from the template into existing catalogs."""
     return {
