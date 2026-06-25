@@ -116,12 +116,21 @@ Use `doit` for repeatable checks and package builds:
 ```bash
 pip install -e .[dev]
 doit list
-doit wheel      # build dist/nexus_sync-0.1.0-py3-none-any.whl
-doit package    # build wheel and sdist
-doit            # run tests, typecheck, format check, and wheel build
+doit wheel          # build dist/nexus_sync-0.1.0-py3-none-any.whl
+doit package        # build wheel and sdist
+doit i18n_compile   # compile nexus-cli translation catalogs
+doit pyinstaller    # build standalone binaries (nexus-cli bundles catalogs)
+doit                # run tests, typecheck, format check, and wheel build
 ```
 
-PyInstaller standalone binaries are still available through Makefile targets:
+Build the documentation (Sphinx) with the `docs` extra:
+
+```bash
+pip install -e .[docs]
+doit docs           # output in docs/_build/html
+```
+
+PyInstaller standalone binaries are also available through Makefile targets:
 
 ```
 make [client|server|cli]

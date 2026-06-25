@@ -43,3 +43,30 @@ def test_doit_default_tasks_include_checks_and_wheel() -> None:
     dodo = _load_dodo()
 
     assert dodo.DOIT_CONFIG["default_tasks"] == ["test", "typecheck", "format_check", "wheel"]
+
+
+def test_doit_has_i18n_compile_task() -> None:
+    dodo = _load_dodo()
+
+    task = dodo.task_i18n_compile()
+
+    assert any("compile" in action for action in _actions(task))
+    assert any(target.endswith("nexus.mo") for target in task["targets"])
+
+
+def test_doit_has_docs_task() -> None:
+    dodo = _load_dodo()
+
+    task = dodo.task_docs()
+
+    assert any("sphinx" in action and "-W" in action for action in _actions(task))
+    assert "docs/conf.py" in task["file_dep"]
+
+
+def test_pyinstaller_cli_bundles_locale_catalogs() -> None:
+    dodo = _load_dodo()
+
+    task = dodo.task_pyinstaller_cli()
+
+    assert "i18n_compile" in task["task_dep"]
+    assert any("--add-data" in action and "locale" in action for action in _actions(task))
