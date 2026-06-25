@@ -6,10 +6,14 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class StrictBaseModel(BaseModel):
+    """Base model that rejects unknown fields (``extra='forbid'``)."""
+
     model_config = ConfigDict(extra="forbid")
 
 
 class ClientPlatform(StrEnum):
+    """Operating-system family reported by a client."""
+
     LINUX = "linux"
     DARWIN = "darwin"
     WINDOWS = "windows"
@@ -17,10 +21,14 @@ class ClientPlatform(StrEnum):
 
 
 class CommandKind(StrEnum):
+    """Type of executor a command targets (only ``exec`` is defined so far)."""
+
     EXEC = "exec"
 
 
 class CommandResultStatus(StrEnum):
+    """Terminal outcome a client reports for an executed command."""
+
     SUCCEEDED = "succeeded"
     FAILED = "failed"
     TIMED_OUT = "timed_out"
@@ -28,6 +36,8 @@ class CommandResultStatus(StrEnum):
 
 
 class CommandStatus(StrEnum):
+    """Lifecycle state of a command on the server (pending → delivered → terminal)."""
+
     PENDING = "pending"
     DELIVERED = "delivered"
     SUCCEEDED = "succeeded"
@@ -37,22 +47,30 @@ class CommandStatus(StrEnum):
 
 
 class ClientInfo(StrictBaseModel):
+    """Identifying details a client reports about itself in a heartbeat."""
+
     hostname: str
     platform: ClientPlatform
     version: str
 
 
 class ClientState(StrictBaseModel):
+    """Lightweight runtime state a client reports (local time, uptime)."""
+
     local_time: datetime
     uptime_seconds: int | None = Field(default=None, ge=0)
 
 
 class ClientCommandCapability(StrictBaseModel):
+    """A command preset a client advertises as runnable (name and description)."""
+
     name: str
     description: str
 
 
 class CommandResult(StrictBaseModel):
+    """Outcome of one executed command, sent by the client to the server."""
+
     command_id: str
     status: CommandResultStatus
     started_at: datetime | None = None
@@ -63,6 +81,8 @@ class CommandResult(StrictBaseModel):
 
 
 class HeartbeatRequest(StrictBaseModel):
+    """Payload a client POSTs each poll: identity, state, capabilities, last result."""
+
     client_id: str
     observed_at: datetime
     client: ClientInfo
@@ -72,6 +92,8 @@ class HeartbeatRequest(StrictBaseModel):
 
 
 class Command(StrictBaseModel):
+    """A command the server hands to a client for execution."""
+
     id: str
     kind: CommandKind
     name: str
@@ -80,6 +102,8 @@ class Command(StrictBaseModel):
 
 
 class HeartbeatResponse(StrictBaseModel):
+    """Server reply to a heartbeat: poll interval and an optional command to run."""
+
     status: Literal["ok"] = "ok"
     server_time: datetime
     next_poll_after_seconds: int = Field(ge=0)
@@ -87,6 +111,8 @@ class HeartbeatResponse(StrictBaseModel):
 
 
 class ClientRecord(StrictBaseModel):
+    """Server-side stored view of a client and its last heartbeat."""
+
     id: str
     hostname: str
     platform: ClientPlatform
@@ -99,6 +125,8 @@ class ClientRecord(StrictBaseModel):
 
 
 class CommandRecord(StrictBaseModel):
+    """Server-side stored command with delivery and lifecycle bookkeeping."""
+
     id: str
     client_id: str
     kind: CommandKind
@@ -114,6 +142,8 @@ class CommandRecord(StrictBaseModel):
 
 
 class CommandResultRecord(StrictBaseModel):
+    """Server-side stored result reported by a client for a command."""
+
     command_id: str
     client_id: str
     status: CommandResultStatus
@@ -126,6 +156,8 @@ class CommandResultRecord(StrictBaseModel):
 
 
 class AuditLogRecord(StrictBaseModel):
+    """Audit-trail entry recording who did what to which subject."""
+
     id: str
     actor: str
     action: str

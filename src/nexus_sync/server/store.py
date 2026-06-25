@@ -15,29 +15,31 @@ from nexus_sync.common import (
 
 
 class Store(Protocol):
+    """Storage interface for clients, commands, and command results."""
+
     def list_clients(self) -> list[ClientRecord]:
-        pass
+        """Return all known clients."""
 
     def get_client(self, client_id: str) -> ClientRecord | None:
-        pass
+        """Return the client with ``client_id``, or ``None`` if unknown."""
 
     def upsert_client(self, heartbeat: HeartbeatRequest, now: datetime) -> ClientRecord:
-        pass
+        """Create or update a client from a heartbeat and return the stored record."""
 
     def enqueue_command(self, command: Command, client_id: str, now: datetime) -> CommandRecord:
-        pass
+        """Queue a pending command for a client and return the stored record."""
 
     def record_command_result(self, heartbeat: HeartbeatRequest, now: datetime) -> None:
-        pass
+        """Persist the command result carried by a heartbeat, if one is present."""
 
     def take_next_command(self, client_id: str, now: datetime) -> Command | None:
-        pass
+        """Pop the oldest pending command for a client, marking it delivered."""
 
     def get_command(self, command_id: str) -> CommandRecord | None:
-        pass
+        """Return the command with ``command_id``, or ``None`` if unknown."""
 
     def get_command_result(self, command_id: str) -> CommandResultRecord | None:
-        pass
+        """Return the latest result for ``command_id``, or ``None`` if none reported."""
 
 
 @dataclass

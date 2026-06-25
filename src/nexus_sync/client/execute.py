@@ -18,22 +18,28 @@ DEFAULT_PRESET_DESCRIPTIONS = {
 
 @dataclass(frozen=True)
 class CommandAccessPolicy:
+    """Whitelist controlling which command presets a client may run."""
+
     allowed_commands: frozenset[str] = field(default_factory=frozenset)
     full_access: bool = False
 
     @classmethod
     def allow(cls, command_names: Iterable[str]) -> "CommandAccessPolicy":
+        """Allow exactly the named command presets."""
         return cls(allowed_commands=frozenset(command_names))
 
     @classmethod
     def allow_all(cls) -> "CommandAccessPolicy":
+        """Allow every command preset (use with care)."""
         return cls(full_access=True)
 
     @classmethod
     def deny_all(cls) -> "CommandAccessPolicy":
+        """Deny every command preset."""
         return cls()
 
     def allows(self, command_name: str) -> bool:
+        """Return whether ``command_name`` is permitted by this policy."""
         return self.full_access or command_name in self.allowed_commands
 
 
@@ -83,6 +89,11 @@ def execute_command(
     access_policy: CommandAccessPolicy = DEFAULT_COMMAND_ACCESS_POLICY,
     output_limit_bytes: int = DEFAULT_OUTPUT_LIMIT_BYTES,
 ) -> CommandResult:
+    """Run a command preset safely and return its :class:`CommandResult`.
+
+    Only known, allowed presets are executed (never arbitrary shell); output is
+    size-limited and each run is bound by ``command.timeout_seconds``.
+    """
     if command.kind != CommandKind.EXEC:
         return _reject(command, f"unsupported command kind: {command.kind}")
 
